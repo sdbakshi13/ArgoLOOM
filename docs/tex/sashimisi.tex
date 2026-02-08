@@ -48,9 +48,99 @@
 		\end{itemize}
 	\end{tcolorbox}
 	
+	\subsection*{Ultra-Quick Deployment Checklist}
+	
+	For users who want the integration running immediately, follow this minimal task list.
+	
+	\begin{tcolorbox}[title=Fastest Working Deployment Path]
+		
+		\textbf{Step 1 — Activate environment}
+		\begin{lstlisting}
+			conda activate sashimi-si
+		\end{lstlisting}
+		
+		\textbf{Step 2 — Ensure dependencies installed}
+		\begin{lstlisting}
+			pip install openai sentence-transformers
+			conda install -c conda-forge faiss-cpu -y
+		\end{lstlisting}
+		
+		\textbf{Step 3 — Copy integration code}
+		
+		\begin{itemize}
+			\item Replace your \texttt{argo-loom.py} with the updated version from:
+			
+			\url{https://github.com/sdbakshi13/ArgoLOOM/tree/main}
+			
+			\item Copy the directory:
+			
+			\begin{lstlisting}
+				tools/cosmo/
+			\end{lstlisting}
+			
+			from the same repository into your local ArgoLOOM installation.
+			
+			\item Download:
+			
+			\begin{lstlisting}
+				argoloom_sashimi_adapter.py
+			\end{lstlisting}
+			
+			from the repository and place it inside:
+			
+			\begin{lstlisting}
+				cosmowork/sashimi_si_project/
+			\end{lstlisting}
+			
+			(See Section 3 for directory structure.)
+		\end{itemize}
+		
+		\textbf{Step 4 — Edit absolute paths}
+		
+		Update all hard-coded paths of the form:
+		
+		\begin{lstlisting}
+			/Users/sdasbakshi/...
+		\end{lstlisting}
+		
+		to match your local machine directory structure.
+		
+		\textbf{Step 5 — Set OpenAI API key}
+		
+		\begin{lstlisting}
+			export OPENAI_API_KEY=sk-...
+		\end{lstlisting}
+		
+		\textbf{Step 6 — Launch ArgoLOOM}
+		
+		\begin{lstlisting}
+			cd /Users/<username>/Documents/GitHub/ArgoLOOM
+			python argo-loom.py --model gpt-4o
+		\end{lstlisting}
+		
+	\end{tcolorbox}
+	
+	\subsection*{Verification Prompt}
+	
+	After launch, test with:
+	
+	\begin{lstlisting}
+		Run sashimi subhalos for host mass 1e12 Msun at z=0
+		with sigma0_m=147.1 and w=24.33.
+	\end{lstlisting}
+	
+	If configured correctly:
+	
+	\begin{itemize}
+		\item The tool \texttt{sashimi\_subhalos} will be called.
+		\item SASHIMI progress will execute.
+		\item A catalog and summary JSON will be produced.
+	\end{itemize}
+	
+	
 	---
 	
-	\section{Assumptions}
+	\section{Following sections have the details of the implementation}
 	
 	We assume:
 	
