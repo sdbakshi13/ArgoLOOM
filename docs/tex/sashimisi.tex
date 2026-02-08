@@ -1,0 +1,353 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\hypersetup{
+	colorlinks=true,
+	linkcolor=blue,
+	urlcolor=blue
+}
+
+\definecolor{codebg}{RGB}{245,245,245}
+
+\lstset{
+	backgroundcolor=\color{codebg},
+	basicstyle=\ttfamily\small,
+	breaklines=true,
+	frame=single
+}
+
+\title{Documentation: Integrating \texttt{SASHIMI-SI} with \texttt{ArgoLOOM}}
+\author{Internal Development Note}
+\date{\today}
+
+\begin{document}
+	
+	\maketitle
+	
+	\section*{Purpose of this Document}
+	
+	This note documents a \textbf{successful end-to-end integration} of the cosmological subhalo simulation code \texttt{SASHIMI-SI} with the orchestration framework \texttt{ArgoLOOM}.
+	
+	\begin{itemize}
+		\item The goal is reproducibility for collaborators.
+		\item This is a \textbf{success-case guide}: it shows what worked.
+		\item It provides both minimal steps (to get running) and explanatory context.
+	\end{itemize}
+	
+	\begin{tcolorbox}
+		\textbf{Reading modes:}
+		\begin{itemize}
+			\item \textbf{Fast setup:} Follow code blocks only.
+			\item \textbf{More details:} Read explanatory text.
+		\end{itemize}
+	\end{tcolorbox}
+	
+	---
+	
+	\section{Assumptions}
+	
+	We assume:
+	
+	\begin{itemize}
+		\item \texttt{SASHIMI-SI} runs correctly standalone.
+		\item \texttt{ArgoLOOM} runs correctly standalone.
+		\item Python version tested: \textbf{3.11}. Other versions were not tested.
+	\end{itemize}
+	
+	---
+	
+	\section{Environment Setup}
+	
+	\subsection{Conda Environment}
+	
+	\begin{lstlisting}
+		conda create -n sashimi-si python=3.11 -y
+		conda activate sashimi-si
+	\end{lstlisting}
+	
+	---
+	
+	\subsection{Core Dependencies}
+	
+	\begin{lstlisting}
+		pip install numpy==1.26.4
+		pip install scipy==1.10.1
+		pip install numexpr
+		pip install tqdm
+		pip install matplotlib
+		pip install jupyter
+		pip install openai
+		pip install sentence-transformers
+		
+		# FAISS (may require conda-forge)
+		conda install -c conda-forge faiss-cpu -y
+	\end{lstlisting}
+	
+	\begin{tcolorbox}
+		\textbf{Notes:}
+		\begin{itemize}
+			\item Mixed \texttt{pip} + \texttt{conda} install was used successfully.
+			\item FAISS installation can vary by system.
+			\item Python 3.11 compatibility was verified; other versions not tested.
+		\end{itemize}
+	\end{tcolorbox}
+	
+	---
+	
+	\section{Directory Structure and Code Edits}
+	
+	A representative working layout on the local machine is shown below. This is provided as a guideline for organizing the integration between \texttt{SASHIMI-SI} and \texttt{ArgoLOOM}.
+	
+	\begin{lstlisting}
+		/Users/<username>/Documents/
+		
+			cosmowork/
+				sashimi_si_project/
+					argoloom_sashimi_adapter.py
+					repo/sashimi-si/
+					runs/
+		
+			GitHub/
+				ArgoLOOM/
+					argo-loom.py
+					tools/cosmo/API_SASHIMI_subhalos.py
+	\end{lstlisting}
+	
+	\begin{tcolorbox}
+		Replace \texttt{<username>} with your machine username where necessary.  
+		Absolute paths in scripts should be updated accordingly.
+	\end{tcolorbox}
+	
+	\vspace{0.5cm}
+	
+	\subsection*{Repository Edits}
+	
+	All edits made to link \texttt{SASHIMI-SI} with \texttt{ArgoLOOM} are available in the public repository:
+	
+	\begin{center}
+		\url{https://github.com/sdbakshi13/ArgoLOOM/tree/main}
+	\end{center}
+	
+	Only the following components were modified or added:
+	
+	\begin{itemize}
+		\item \texttt{argo-loom.py}  
+		\begin{itemize}
+			\item Addition of the \texttt{sashimi\_subhalos} tool schema.
+			\item Tool execution block for dispatching SASHIMI runs.
+		\end{itemize}
+		
+		\item \texttt{tools/cosmo/API\_SASHIMI\_subhalos.py}  
+		\begin{itemize}
+			\item New tool wrapper to interface ArgoLOOM with the SASHIMI adapter.
+			\item Handles parameter passing and JSON output formatting.
+		\end{itemize}
+	\end{itemize}
+	
+	\begin{tcolorbox}
+		No other core ArgoLOOM modules were modified.  
+		This ensures minimal intrusion into the base orchestration framework.
+	\end{tcolorbox}
+	
+	
+	
+	
+	---
+	
+	\section{Conceptual Architecture (Skippable)}
+	
+	\begin{tcolorbox}
+		\textbf{Skip if you only want setup instructions.}
+	\end{tcolorbox}
+	
+	Pipeline flow:
+	
+	\[
+	\text{ArgoLOOM} \rightarrow \text{Tool Call} \rightarrow \text{SASHIMI Adapter} \rightarrow \text{Catalog} \rightarrow \text{Summary JSON}
+	\]
+	
+	Artifacts produced:
+	
+	\begin{itemize}
+		\item \texttt{catalog\_raw.npz}
+		\item \texttt{catalog\_SIDM\_survivors.npz}
+		\item \texttt{summary.json}
+	\end{itemize}
+	
+	---
+	
+	\section{SASHIMI Adapter}
+	
+	Location:
+	
+	\begin{lstlisting}
+		cosmowork/sashimi_si_project/argoloom_sashimi_adapter.py
+	\end{lstlisting}
+	
+	Purpose:
+	
+	\begin{itemize}
+		\item Runs SASHIMI.
+		\item Filters surviving subhalos.
+		\item Writes catalogs + JSON summary.
+		\item Prints JSON to stdout for ArgoLOOM ingestion.
+	\end{itemize}
+	
+	(Use the working adapter script from development.)
+	
+	---
+	
+	\section{ArgoLOOM Tool Wrapper}
+	
+	Create:
+	
+	\begin{lstlisting}
+		ArgoLOOM/tools/cosmo/API_SASHIMI_subhalos.py
+	\end{lstlisting}
+	
+	This script:
+	
+	\begin{itemize}
+		\item Reads parameters from env variable:
+		\texttt{ARGOLOOM\_SASHIMI\_PARAMS\_JSON}
+		\item Calls the adapter.
+		\item Returns JSON output.
+	\end{itemize}
+	
+	---
+	
+	\section{Edits to \texttt{argo-loom.py}}
+	
+	\subsection{Add Tool Schema}
+	
+	Add to \texttt{build\_tools\_schema()}:
+	
+	\begin{lstlisting}
+		{
+			"type": "function",
+			"function": {
+				"name": "sashimi_subhalos",
+				"description": "Run SASHIMI-SI subhalo catalog generation.",
+				"parameters": {
+					"type": "object",
+					"properties": {
+						"M0": {"type":"number"},
+						"redshift":{"type":"number"},
+						"logmamin":{"type":"integer"},
+						"sigma0_m":{"type":"number"},
+						"w":{"type":"number"}
+					},
+					"required":["M0","sigma0_m","w"]
+		}}}
+	\end{lstlisting}
+	
+	---
+	
+	\subsection{Add Tool Execution Block}
+	
+	Inside \texttt{\# ---- EXECUTE TOOLS ----}:
+	
+	\begin{lstlisting}
+		elif fname == "sashimi_subhalos":
+		try:
+		result = run_tool_sashimi_subhalos(fargs)
+		except Exception as e:
+		result = {"error": str(e)}
+		
+		messages.append({
+			"role": "tool",
+			"tool_call_id": tc.id,
+			"name": "sashimi_subhalos",
+			"content": json.dumps(result),
+		})
+	\end{lstlisting}
+	
+	---
+	
+	\section{Running the Agent}
+	
+	\begin{lstlisting}
+		conda activate sashimi-si
+		
+		cd /Users/<username>/Documents/GitHub/ArgoLOOM
+		
+		python argo-loom.py --model gpt-4o
+	\end{lstlisting}
+	
+	Example prompt:
+	
+	\begin{lstlisting}
+		Run sashimi subhalos for host mass 1e12 Msun at z=0
+		with sigma0_m=147.1 and w=24.33.
+	\end{lstlisting}
+	
+	---
+	
+	\section{Expected Output}
+	
+	\begin{itemize}
+		\item Tool call executed.
+		\item SASHIMI progress printed.
+		\item Agent returns summary:
+	\end{itemize}
+	
+	\begin{lstlisting}
+		N_filtered = 1353384
+		Quantiles [1,10,50,90,99] = [...]
+	\end{lstlisting}
+	
+	---
+	
+	\section{Cross-Checks}
+	
+	\begin{lstlisting}
+		python - <<'PY'
+		import json
+		p=".../summary.json"
+		print(json.load(open(p)))
+		PY
+	\end{lstlisting}
+	
+	---
+	
+	\section{Troubleshooting}
+	
+	Common issues encountered:
+	
+	\begin{itemize}
+		\item \texttt{ModuleNotFoundError: numexpr}
+		\item Missing \texttt{scipy.integrate.simps}
+		\item Missing \texttt{openai}
+		\item Missing \texttt{sentence\_transformers}
+		\item FAISS installation issues
+		\item API quota errors
+	\end{itemize}
+	
+	\begin{tcolorbox}
+		\textbf{Practical advice:}  
+		Copy the error into ChatGPT and ask for resolution.  
+		This was highly effective during development.
+	\end{tcolorbox}
+	
+	---
+	
+	\section{Conclusion}
+	
+	We have documented a successful integration of:
+	
+	\begin{itemize}
+		\item Cosmological SIDM simulation (\texttt{SASHIMI-SI})
+		\item Agentic orchestration framework (\texttt{ArgoLOOM})
+	\end{itemize}
+	
+	This enables automated generation, filtering, and reasoning over subhalo populations within the ArgoLOOM pipeline.
+	
+	---
+	
+\end{document}
