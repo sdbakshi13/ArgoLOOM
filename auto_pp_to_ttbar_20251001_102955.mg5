@@ -1,0 +1,9 @@
+import model sm
+generate p p > t t~
+output pp_to_ttbar
+launch
+set run_card nevents 2000
+set run_card ebeam1 6500.0
+set run_card ebeam2 6500.0
+set run_card iseed 12345
+launch

@@ -1,0 +1,114 @@
+#************************************************************
+#*               MadGraph5_aMC@NLO/MadEvent                 *
+#*                                                          *
+#*                *                       *                 *
+#*                  *        * *        *                   *
+#*                    * * * * 5 * * * *                     *
+#*                  *        * *        *                   *
+#*                *                       *                 *
+#*                                                          *
+#*                                                          *
+#*         VERSION 3.6.2                 2025-03-19         *
+#*                                                          *
+#*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+#*                                                          *
+#************************************************************
+#*                                                          *
+#*               Command File for MadEvent                  *
+#*                                                          *
+#*     run as ./bin/madevent.py filename                    *
+#*                                                          *
+#************************************************************
+generate_events run_01
+Traceback (most recent call last):
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/extended_cmd.py", line 1548, in onecmd
+    return self.onecmd_orig(line, **opt)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/extended_cmd.py", line 1497, in onecmd_orig
+    return func(arg, **opt)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/madevent_interface.py", line 2406, in do_generate_events
+    self.run_generate_events(switch_mode, args)
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/common_run_interface.py", line 7886, in new_fct
+    scan_over_run_card(original_fct, obj, *args, **opts)
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/common_run_interface.py", line 7818, in scan_over_run_card
+    return original_fct(obj, *args, **opts)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/madevent_interface.py", line 2599, in run_generate_events
+    self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/extended_cmd.py", line 1577, in exec_cmd
+    stop = Cmd.onecmd_orig(current_interface, line, **opt)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/extended_cmd.py", line 1497, in onecmd_orig
+    return func(arg, **opt)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/madevent_interface.py", line 3460, in do_survey
+    jobs, P_zero_result = ajobcreator.get_helicity()
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/madevent/gen_ximprove.py", line 150, in get_helicity
+    self.cmd.compile(['gensym'], cwd=Pdir)
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/interface/extended_cmd.py", line 1643, in compile
+    return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/sdasbakshi/Documents/newmg5/madgraph/various/misc.py", line 591, in compile
+    raise MadGraph5Error(error_text)
+madgraph.MadGraph5Error: A compilation Error occurs when trying to compile /Users/sdasbakshi/Documents/GitHub/ArgoLOOM/pp_to_ttbar/SubProcesses/P1_gg_ttx.
+The compilation fails with the following output message:
+    gfortran -o gensym symmetry.o idenparts.o  -L../../lib/   -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lgammaUPC -lcernlib  -lbias  -L/usr/local/lib
+    ld: library not found for -lSystem
+    collect2: error: ld returned 1 exit status
+    make: *** [gensym] Error 1
+    
+Please try to fix this compilations issue and retry.
+Help might be found at https://answers.launchpad.net/mg5amcnlo.
+If you think that this is a bug, you can report this at https://bugs.launchpad.net/mg5amcnlo
+                              Run Options    
+                              -----------    
+               stdout_level 	:	20 (user set)
+
+                         MadEvent Options    
+                         ----------------    
+     automatic_html_opening 	:	False (user set)
+        notification_center 	:	True
+                   run_mode 	:	2
+              cluster_queue 	:	None (user set)
+               cluster_time 	:	None (user set)
+               cluster_size 	:	100
+             cluster_memory 	:	100 (user set)
+                    nb_core 	:	16 (user set)
+          cluster_temp_path 	:	None
+
+                      Configuration Options    
+                      ---------------------    
+               pythia8_path 	:	None (user set)
+                  hwpp_path 	:	None (user set)
+                thepeg_path 	:	None (user set)
+                 hepmc_path 	:	None (user set)
+           madanalysis_path 	:	None (user set)
+          madanalysis5_path 	:	/Users/sdasbakshi/Documents/newmg5/HEPTools/madanalysis5/madanalysis5 (user set)
+            pythia-pgs_path 	:	None (user set)
+                    td_path 	:	None (user set)
+               delphes_path 	:	None (user set)
+        exrootanalysis_path 	:	None (user set)
+               syscalc_path 	:	None (user set)
+                 rivet_path 	:	None
+                  yoda_path 	:	None
+                     lhapdf 	:	/Users/sdasbakshi/Documents/newmg5/HEPTools/lhapdf6_py3/bin/lhapdf-config (user set)
+                 lhapdf_py2 	:	None
+                 lhapdf_py3 	:	/Users/sdasbakshi/Documents/newmg5/HEPTools/lhapdf6_py3/bin/lhapdf-config (user set)
+                    timeout 	:	60
+              f2py_compiler 	:	None
+          f2py_compiler_py2 	:	None
+          f2py_compiler_py3 	:	None
+                web_browser 	:	None
+                 eps_viewer 	:	None
+                text_editor 	:	None
+           fortran_compiler 	:	None
+               cpp_compiler 	:	None
+                auto_update 	:	7 (user set)
+               cluster_type 	:	condor
+      cluster_status_update 	:	(600, 30)
+           cluster_nb_retry 	:	1
+         cluster_local_path 	:	None
+         cluster_retry_wait 	:	300

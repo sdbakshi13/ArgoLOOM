@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """
-agent-chat-bot.py
------------------
-Conversational front-end that can launch EITHER:
+argo-loom.py
+------------
+Conversational front-end that can launch:
   • MG5 pipeline (API_MG5-kin.py)
   • CLASS pipeline (toolkit_class.py)
+  • SASHIMI-SI subhalo catalog pipeline (tools/cosmo/API_SASHIMI_subhalos.py)
   • Physics KB search (toolkit_kb.py)
 
 Key details
 -----------
 - Avoids empty `tool_calls` on assistant messages.
 - Preserves proper tool->assistant threading (each tool execution yields a
-  `{"role":"tool","tool_call_id":...}` message before the next model call).
+  {"role":"tool","tool_call_id":...} message before the next model call).
 - Includes a knowledge-base retrieval tool that queries a local FAISS index.
 
 Usage
 -----
 export OPENAI_API_KEY=...
-python agent-chat-bot.py \
+python argo-loom.py \
   --mg5-path /path/to/mg5_aMC \
   --mg5-pipeline-file API_MG5-kin.py \
   --class-pipeline-file toolkit_class.py \
@@ -35,6 +36,46 @@ from typing import Any, Dict, List
 
 from openai import OpenAI
 import toolkit_kb  # your KB toolkit module (kb_build/kb_query compatible)
+
+
+# ----------------------- SASHIMI tool runner -------------------------
+
+def run_tool_sashimi_subhalos(params: dict) -> dict:
+    """
+    Calls ArgoLOOM SASHIMI tool wrapper, which must print JSON to stdout.
+
+    Expected params keys:
+      M0, sigma0_m, w (required)
+      redshift, logmamin, dz, zmax, outdir (optional)
+    """
+    script = "/Users/sdasbakshi/Documents/GitHub/ArgoLOOM/tools/cosmo/API_SASHIMI_subhalos.py"
+
+    cmd = [sys.executable, script]
+
+    # Pass params via env var (robust even if wrapper has no CLI args)
+    env = dict(os.environ)
+    env["ARGOLOOM_SASHIMI_PARAMS_JSON"] = json.dumps(params)
+
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            "SASHIMI tool failed\n"
+            f"CMD: {' '.join(cmd)}\n"
+            f"STDOUT:\n{proc.stdout}\n"
+            f"STDERR:\n{proc.stderr}\n"
+        )
+
+    # Wrapper prints JSON on stdout
+    stdout = proc.stdout.strip()
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            "SASHIMI tool did not return valid JSON\n"
+            f"STDOUT:\n{proc.stdout}\n"
+            f"STDERR:\n{proc.stderr}\n"
+        ) from e
+
 
 # --------------------------- Startup Banner ---------------------------
 
@@ -59,11 +100,13 @@ def print_banner():
     """
     print(banner)
 
+
 # --------------------------- Defaults ---------------------------
 
 DEFAULT_MODEL = "gpt-4o"
 DEFAULT_MG5_PIPELINE = "API_MG5-kin.py"
 DEFAULT_CLASS_PIPELINE = "toolkit_class.py"
+
 
 # --------------------------- Tool schemas ---------------------------
 
@@ -94,12 +137,14 @@ def build_tools_schema() -> List[dict]:
                         "x_smear_alpha": {"type": "number", "default": 2.0},
                         "x_smear_beta": {"type": "number", "default": 2.0},
                         "plot": {"type": "boolean", "default": True},
-                        "model_name": {"type": "string", "default": DEFAULT_MODEL}
+                        "model_name": {"type": "string", "default": DEFAULT_MODEL},
                     },
-                    "required": ["mg5_path", "import_model", "process", "outtag",
-                                 "nevents", "ebeam_gev", "iseed", "pdg", "mode"]
-                }
-            }
+                    "required": [
+                        "mg5_path", "import_model", "process", "outtag",
+                        "nevents", "ebeam_gev", "iseed", "pdg", "mode"
+                    ],
+                },
+            },
         },
         {
             "type": "function",
@@ -127,11 +172,32 @@ def build_tools_schema() -> List[dict]:
                         "lensing": {"type": "string", "enum": ["yes", "no"], "default": "yes"},
                         "lmax": {"type": "integer", "default": 3000},
                         "output": {"type": "string", "default": "tCl,pCl,lCl"},
-                        "plot": {"type": "boolean", "default": True}
+                        "plot": {"type": "boolean", "default": True},
                     },
-                    "required": ["class_path", "outtag", "h", "ombh2", "omch2", "As", "ns", "tau_reio"]
-                }
-            }
+                    "required": ["class_path", "outtag", "h", "ombh2", "omch2", "As", "ns", "tau_reio"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "sashimi_subhalos",
+                "description": "Run SASHIMI-SI to generate a subhalo population catalog for a host halo (writes NPZ + summary.json).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "M0": {"type": "number", "description": "Host halo mass (Msun)."},
+                        "redshift": {"type": "number", "default": 0.0},
+                        "logmamin": {"type": "integer", "default": 6, "description": "Minimum log10(subhalo mass scale) used by SASHIMI."},
+                        "sigma0_m": {"type": "number", "description": "SASHIMI SIDM parameter."},
+                        "w": {"type": "number", "description": "SASHIMI SIDM velocity scale parameter."},
+                        "dz": {"type": "number", "default": 0.01},
+                        "zmax": {"type": "number", "default": 5.0},
+                        "outdir": {"type": "string", "nullable": True, "default": None},
+                    },
+                    "required": ["M0", "sigma0_m", "w"],
+                },
+            },
         },
         {
             "type": "function",
@@ -145,12 +211,12 @@ def build_tools_schema() -> List[dict]:
                         "query": {"type": "string", "description": "User query / question."},
                         "k": {"type": "integer", "default": 5, "minimum": 1, "maximum": 50},
                         "engine": {"type": "string", "enum": ["auto", "faiss", "numpy"], "default": "auto"},
-                        "doc_id": {"type": "string", "nullable": True, "description": "Optional doc id filter."}
+                        "doc_id": {"type": "string", "nullable": True, "description": "Optional doc id filter."},
                     },
-                    "required": ["index_dir", "query"]
-                }
-            }
-        }
+                    "required": ["index_dir", "query"],
+                },
+            },
+        },
     ]
 
 
@@ -224,7 +290,7 @@ def run_subprocess(argv: List[str]) -> int:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        bufsize=1
+        bufsize=1,
     )
     try:
         for line in proc.stdout:
@@ -241,7 +307,7 @@ def run_subprocess(argv: List[str]) -> int:
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Chat bot that can run MG5 and CLASS pipelines via function-calling, and query a local physics KB."
+        description="Chat bot that can run MG5/CLASS/SASHIMI pipelines via function-calling, and query a local physics KB."
     )
     ap.add_argument("--model", default=DEFAULT_MODEL, help="Chat model (OpenAI)")
     ap.add_argument("--mg5-path", required=False,
@@ -264,8 +330,8 @@ def main():
 
     system_prompt = (
         "You are a helpful simulation orchestrator. "
-        "When the user asks to run MadGraph (MG5) or CLASS, collect parameters "
-        "and call the proper tool with a concise, strictly-typed JSON. "
+        "When the user asks to run MadGraph (MG5), CLASS, or SASHIMI-SI, collect parameters "
+        "and call the proper tool with concise, strictly-typed JSON. "
         "Prefer sensible defaults if the user is vague. "
         "Do NOT hallucinate file paths; if not provided, ask. "
         "Only call ONE tool per message unless the user clearly asks for multiple runs. "
@@ -276,8 +342,8 @@ def main():
     messages: List[Dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
     print_banner()
-
     print("[ArgoLOOM] Ready. Type your request (Ctrl+C to exit).\n")
+
     while True:
         try:
             user = input("> ")
@@ -360,6 +426,18 @@ def main():
                     "tool_call_id": tc.id,
                     "name": "run_class_pipeline",
                     "content": f"CLASS pipeline finished with exit code {rc}. outtag='{fargs.get('outtag','')}'"
+                })
+
+            elif fname == "sashimi_subhalos":
+                try:
+                    result = run_tool_sashimi_subhalos(fargs)
+                except Exception as e:
+                    result = {"error": str(e)}
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "name": "sashimi_subhalos",
+                    "content": json.dumps(result),
                 })
 
             elif fname == "kb_search":
